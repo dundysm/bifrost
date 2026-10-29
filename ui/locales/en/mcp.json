@@ -791,6 +791,8 @@
 			"boundTo": "Bound to",
 			"status": "Status",
 			"accessTokenExpiry": "Access token expiry",
+			"discovery": "Discovery",
+			"discoveryHelp": "What Bifrost discovered with this credential on a server with Per-Caller Discovery on: its tools, prompts and resources, and when. Not yet: the caller has not connected since signing in, or discovery failed; it runs on their next connect. Shared: the server keeps one discovery that every caller uses. A dash: the credential needs action first, or it is session-bound.",
 			"created": "Created"
 		},
 		"tooltips": {
