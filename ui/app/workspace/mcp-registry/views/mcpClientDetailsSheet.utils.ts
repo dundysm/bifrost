@@ -413,21 +413,59 @@ export function toolStat(client: Pick<MCPClient, "config" | "tools" | "state">):
 	return { value: `${enabled} of ${tools.length} enabled`, sub: auto > 0 ? `${auto} auto-execute` : "none auto-execute" };
 }
 
-/** accessStat is the Access figure at the top of the view: what reaches the server besides its own endpoint. */
-export function accessStat(config: MCPClientConfig, virtualKeys: number, virtualMcps: number): { value: string; sub: string } {
+/** MCPClientAccessGrantCount is a kind of grant a build adds to the Access figure, counted under its own noun. */
+export interface MCPClientAccessGrantCount {
+	count: number | undefined; // undefined while the build is still counting them
+	noun: { one: string; many: string };
+}
+
+/**
+ * accessStat is the Access figure at the top of the view: what reaches the
+ * server besides its own endpoint. Grants a build adds are counted beside the
+ * keys, which then read as "keys" to keep the figure short.
+ */
+export function accessStat(
+	config: MCPClientConfig,
+	virtualKeys: number,
+	virtualMcps: number,
+	grants?: MCPClientAccessGrantCount,
+): { value: string; sub: string } {
 	const keys = plural(virtualKeys, "virtual key", "virtual keys");
 	const vmcps = plural(virtualMcps, "Virtual MCP", "Virtual MCPs");
+	// Until the grants are counted, no conclusion about who has access is drawn.
+	if (grants && grants.count === undefined) {
+		const loading = `loading ${grants.noun.many}`;
+		return config.allow_by_default
+			? { value: i18n.t("registry.filter.allowedByDefault", { ns: "mcp" }), sub: loading }
+			: { value: "…", sub: loading };
+	}
+	const granted = grants?.count ? plural(grants.count, grants.noun.one, grants.noun.many) : "";
 	if (config.allow_by_default) {
-		const extras = [virtualKeys > 0 ? keys : "", virtualMcps > 0 ? vmcps : ""].filter(Boolean);
+		const extras = [virtualKeys > 0 ? keys : "", granted, virtualMcps > 0 ? vmcps : ""].filter(Boolean);
+		const none = grants ? `no key or ${grants.noun.one} overrides` : "no key overrides";
 		return {
 			value: i18n.t("registry.filter.allowedByDefault", { ns: "mcp" }),
-			sub: extras.length > 0 ? `and ${extras.join(" · ")}` : "no key overrides",
+			sub: extras.length > 0 ? `and ${extras.join(" · ")}` : none,
 		};
 	}
+	let value = virtualKeys > 0 ? keys : "No access";
+	if (granted) {
+		value = virtualKeys > 0 ? `${plural(virtualKeys, "key", "keys")} · ${granted}` : granted;
+	}
 	return {
-		value: virtualKeys > 0 ? keys : "No access",
+		value,
 		sub: [virtualMcps > 0 ? `and ${vmcps}` : "", "not allowed by default"].filter(Boolean).join(" · "),
 	};
+}
+
+/** accessExplanation is the sentence beside Allow by Default on the Access tab: who may reach the server, naming the grants a build registers. */
+export function accessExplanation(allowByDefault: boolean, grantNoun?: { one: string; many: string }): string {
+	if (allowByDefault) {
+		return "Any caller can use this server with all tools allowed. A virtual key listed below uses its own allowlist instead.";
+	}
+	return grantNoun
+		? `Only the virtual keys below, the ${grantNoun.many} below, and callers of the Virtual MCPs below, can reach this server.`
+		: "Only the virtual keys below, and callers of the Virtual MCPs below, can reach this server.";
 }
 
 /**
