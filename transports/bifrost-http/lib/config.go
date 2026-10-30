@@ -8082,6 +8082,28 @@ func (c *Config) GetMCPClientNames() map[string]string {
 	return result
 }
 
+// GetMCPPerUserDiscoveryClients returns the name of every enabled MCP client with
+// per_user_discovery on, keyed by client ID. Read-only snapshot.
+func (c *Config) GetMCPPerUserDiscoveryClients() map[string]string {
+	c.muMCP.RLock()
+	defer c.muMCP.RUnlock()
+
+	if c.MCPConfig == nil {
+		return nil
+	}
+	var result map[string]string
+	for _, client := range c.MCPConfig.ClientConfigs {
+		if client == nil || client.Disabled || client.PerUserDiscovery == nil || !*client.PerUserDiscovery {
+			continue
+		}
+		if result == nil {
+			result = make(map[string]string)
+		}
+		result[client.ID] = client.Name
+	}
+	return result
+}
+
 // GetMCPClientBySlug resolves an MCP client by its endpoint slug, returning its ID and name so a single
 // client can be served at /mcp/<slug>. Read-only snapshot.
 func (c *Config) GetMCPClientBySlug(slug string) (clientID, clientName string, ok bool) {
